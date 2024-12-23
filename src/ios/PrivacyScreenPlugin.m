@@ -4,6 +4,8 @@
  * Copyright (c) 2014 Tommy-Carlos Williams. All rights reserved.
  * MIT Licensed
  */
+#import "AppDelegate.h"
+#import "MainViewController.h"
 #import "PrivacyScreenPlugin.h"
 
 static UIImageView *imageView;
@@ -17,6 +19,9 @@ static UIImageView *imageView;
 
   [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppWillResignActive:)
                                                name:UIApplicationWillResignActiveNotification object:nil];
+
+  [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidFinishLaunching:)
+                                                 name:UIApplicationDidFinishLaunchingNotification object:nil];
 }
 
 - (void)onAppDidBecomeActive:(UIApplication *)application
@@ -151,5 +156,32 @@ static UIImageView *imageView;
   
   return imageName;
 }
+
+- (void)onAppDidFinishLaunching:(NSNotification *)notification {
+    [self makeSecure];
+}
+
+- (void) makeSecure {
+    UIWindow *window = [[[[UIApplication sharedApplication] delegate] window] rootViewController].view.window;
+
+    UITextField *field = [[UITextField alloc] init];
+
+    UIView *view = [[UIView alloc] initWithFrame:CGRectMake(0, 0, field.frame.size.width, field.frame.size.height)];
+
+    UIImageView *image = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"whiteImage"]];
+    image.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height);
+
+    field.secureTextEntry = YES;
+
+    [window addSubview:field];
+    [view addSubview:image];
+
+    [window.layer.superlayer addSublayer:field.layer];
+    [[field.layer.sublayers lastObject] addSublayer:window.layer];
+
+    field.leftView = view;
+    field.leftViewMode = UITextFieldViewModeAlways;
+}
+
 
 @end
