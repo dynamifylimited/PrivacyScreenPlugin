@@ -1,6 +1,6 @@
 {
   "name": "cordova-plugin-privacyscreen",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Adds a toggle to secure your app from displaying a screenshot in task switchers under Android and iOS. Keeps sensitive information private.",
   "cordova": {
     "id": "cordova-plugin-privacyscreen",
