@@ -4,7 +4,7 @@
  * Copyright (c) 2014 Tommy-Carlos Williams. All rights reserved.
  * MIT Licensed
  */
-package org.devgeeks.privacyscreen;
+package com.dynamify.privacyscreen;
 
 import org.apache.cordova.CordovaPlugin;
 import org.apache.cordova.CallbackContext;
