@@ -17,6 +17,27 @@ Test this plugin on a real device because the iOS simulator (7.1 at least) does 
 1. To add this plugin type: `cordova plugin add https://github.com/dynamifylimited/PrivacyScreenPlugin.git`
 2. To remove this plugin type: `cordova plugin remove cordova-plugin-privacyscreen`
 
+## Usage in javascript
+
+```js
+document.addEventListener("deviceready", onDeviceReady, false);
+// Enable
+function onDeviceReady() {
+    cordova.plugins.PrivacyScreenPlugin.enable(successCallback, errorCallback);
+}
+// Disable
+function onDeviceReady() {
+    cordova.plugins.PrivacyScreenPlugin.disable(successCallback, errorCallback);
+}
+
+function successCallback(result) {
+  console.log(result);
+}
+
+function errorCallback(error) {
+  console.log(error);
+}
+```
 
 ## License
 

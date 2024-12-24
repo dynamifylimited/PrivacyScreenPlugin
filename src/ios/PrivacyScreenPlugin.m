@@ -9,10 +9,12 @@
 #import "PrivacyScreenPlugin.h"
 
 static UIImageView *imageView;
+static UITextField *secureField;
+static BOOL enabled = false;
 
 @implementation PrivacyScreenPlugin
 
-- (void) pluginInitialize {
+- (void)pluginInitialize {
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidBecomeActive:) name:UIApplicationDidBecomeActiveNotification object:nil];
 
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppWillResignActive:) name:UIApplicationWillResignActiveNotification object:nil];
@@ -20,162 +22,45 @@ static UIImageView *imageView;
     [[NSNotificationCenter defaultCenter] addObserver:self selector:@selector(onAppDidFinishLaunching:) name:UIApplicationDidFinishLaunchingNotification object:nil];
 }
 
-- (void) onAppDidBecomeActive:(UIApplication *)application {
-    if (imageView == NULL) {
-        self.viewController.view.window.hidden = NO;
-    } else {
+// on app becoming active again, remove any black layers in front of it
+- (void)onAppDidBecomeActive:(UIApplication *)application {
+    // self.viewController.view.window.hidden = NO;
+    if (imageView != NULL) {
         [imageView removeFromSuperview];
-    }
-}
-
-- (void) onAppWillResignActive:(UIApplication *)application {
-    CDVViewController *vc = (CDVViewController*)self.viewController;
-    NSString *imgName = [self getImageName:self.viewController.interfaceOrientation delegate:(id<CDVScreenOrientationDelegate>)vc device:[self getCurrentDevice]];
-    UIImage *splash = [UIImage imageNamed:imgName];
-    if (splash == NULL) {
         imageView = NULL;
-        self.viewController.view.window.hidden = YES;
-    } else {
+    }
+}
+
+// if privacy is enabled, on app becoming inactive the view is blocked out by disabling the view,
+// or by putting a black layer in front of it
+- (void)onAppWillResignActive:(UIApplication *)application {
+    if (enabled) {
+        // self.viewController.view.window.hidden = YES;
+
+        // create a black image, then put it in front of the app view
+        CGSize imageSize = CGSizeMake(64, 64);
+        UIColor *fillColor = [UIColor blackColor];
+        UIGraphicsBeginImageContextWithOptions(imageSize, NO, 0);
+        CGContextRef context = UIGraphicsGetCurrentContext();
+        [fillColor setFill];
+        CGContextFillRect(context, CGRectMake(0, 0, imageSize.width, imageSize.height));
+        UIImage *image = UIGraphicsGetImageFromCurrentImageContext();
+        UIGraphicsEndImageContext();
+
         imageView = [[UIImageView alloc]initWithFrame:[self.viewController.view bounds]];
-        [imageView setImage:splash];
+        [imageView setImage:image];
 
-    #ifdef __CORDOVA_4_0_0
-        [[UIApplication sharedApplication].keyWindow addSubview:imageView];
-    #else
-        [self.viewController.view addSubview:imageView];
-    #endif
+        #ifdef __CORDOVA_4_0_0
+            [[UIApplication sharedApplication].keyWindow addSubview:imageView];
+        #else
+            [self.viewController.view addSubview:imageView];
+        #endif
     }
 }
 
-// Code below borrowed from the CDV splashscreen plugin @ https://github.com/apache/cordova-plugin-splashscreen
-// Made some adjustments though, because landscape splash screens are not available for iphone < 6 plus
-- (CDV_iOSDevice) getCurrentDevice {
-    CDV_iOSDevice device;
-
-    UIScreen* mainScreen = [UIScreen mainScreen];
-    CGFloat mainScreenHeight = mainScreen.bounds.size.height;
-    CGFloat mainScreenWidth = mainScreen.bounds.size.width;
-
-    int limit = MAX(mainScreenHeight,mainScreenWidth);
-
-    device.iPad = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPad);
-    device.iPhone = (UI_USER_INTERFACE_IDIOM() == UIUserInterfaceIdiomPhone);
-    device.retina = ([mainScreen scale] == 2.0);
-    device.iPhone4 = (device.iPhone && limit == 480.0);
-    device.iPhone5 = (device.iPhone && limit == 568.0);
-    // note these below is not a true device detect, for example if you are on an
-    // iPhone 6/6+ but the app is scaled it will prob set iPhone5 as true, but
-    // this is appropriate for detecting the runtime screen environment
-    device.iPhone6 = (device.iPhone && limit == 667.0);
-    device.iPhone6Plus = (device.iPhone && limit == 736.0);
-    device.iPhoneX = (device.iPhone && limit == 812.0);
-
-    return device;
-}
-
-- (BOOL) isUsingCDVLaunchScreen {
-    NSString* launchStoryboardName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UILaunchStoryboardName"];
-    if (launchStoryboardName) {
-        return ([launchStoryboardName isEqualToString:@"CDVLaunchScreen"]);
-    } else {
-        return NO;
-    }
-}
-
-- (NSString*) getImageName:(UIInterfaceOrientation)currentOrientation delegate:(id<CDVScreenOrientationDelegate>)orientationDelegate device:(CDV_iOSDevice)device {
-    // Use UILaunchImageFile if specified in plist. Otherwise, use Default.
-    NSString* imageName = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"UILaunchImageFile"];
-
-    // detect if we are using CB-9762 Launch Storyboard; if so, return the associated image instead
-    if ([self isUsingCDVLaunchScreen]) {
-        imageName = @"LaunchStoryboard";
-        return imageName;
-    }
-
-    NSUInteger supportedOrientations = [orientationDelegate supportedInterfaceOrientations];
-
-    // Checks to see if the developer has locked the orientation to use only one of Portrait or Landscape
-    BOOL supportsLandscape = (supportedOrientations & UIInterfaceOrientationMaskLandscape);
-    BOOL supportsPortrait = (supportedOrientations & UIInterfaceOrientationMaskPortrait || supportedOrientations & UIInterfaceOrientationMaskPortraitUpsideDown);
-    // this means there are no mixed orientations in there
-    BOOL isOrientationLocked = !(supportsPortrait && supportsLandscape);
-
-    if (imageName) {
-        imageName = [imageName stringByDeletingPathExtension];
-    } else {
-        imageName = @"Default";
-    }
-
-    // Add Asset Catalog specific prefixes
-    if ([imageName isEqualToString:@"LaunchImage"]) {
-        if (device.iPhone4 || device.iPhone5 || device.iPad) {
-            imageName = [imageName stringByAppendingString:@"-700"];
-        } else if (device.iPhone6) {
-            imageName = [imageName stringByAppendingString:@"-800"];
-        } else if (device.iPhone6Plus || device.iPhoneX) {
-            if (device.iPhone6Plus) {
-                imageName = [imageName stringByAppendingString:@"-800"];
-            } else {
-                imageName = [imageName stringByAppendingString:@"-1100"];
-            }
-            if (currentOrientation == UIInterfaceOrientationPortrait || currentOrientation == UIInterfaceOrientationPortraitUpsideDown) {
-                imageName = [imageName stringByAppendingString:@"-Portrait"];
-            }
-        }
-    }
-
-    BOOL isLandscape = supportsLandscape &&
-        (currentOrientation == UIInterfaceOrientationLandscapeLeft || currentOrientation == UIInterfaceOrientationLandscapeRight);
-
-    if (device.iPhone5) { // does not support landscape
-        imageName = isLandscape ? nil : [imageName stringByAppendingString:@"-568h"];
-    } else if (device.iPhone6) { // does not support landscape
-        imageName = isLandscape ? nil : [imageName stringByAppendingString:@"-667h"];
-    } else if (device.iPhone6Plus || device.iPhoneX) { // supports landscape
-        if (isOrientationLocked) {
-            imageName = [imageName stringByAppendingString:(supportsLandscape ? @"-Landscape" : @"")];
-        } else {
-            switch (currentOrientation) {
-                case UIInterfaceOrientationLandscapeLeft:
-                case UIInterfaceOrientationLandscapeRight:
-                    imageName = [imageName stringByAppendingString:@"-Landscape"];
-                    break;
-                default:
-                    break;
-            }
-        }
-        if (device.iPhone6Plus) {
-            imageName = [imageName stringByAppendingString:@"-736h"];
-        } else {
-            imageName = [imageName stringByAppendingString:@"-2436h"];
-        }
-    } else if (device.iPad) { // supports landscape
-        if (isOrientationLocked) {
-            imageName = [imageName stringByAppendingString:(supportsLandscape ? @"-Landscape" : @"-Portrait")];
-        } else {
-            switch (currentOrientation) {
-                case UIInterfaceOrientationLandscapeLeft:
-                case UIInterfaceOrientationLandscapeRight:
-                    imageName = [imageName stringByAppendingString:@"-Landscape"];
-                    break;
-
-                case UIInterfaceOrientationPortrait:
-                case UIInterfaceOrientationPortraitUpsideDown:
-                default:
-                    imageName = [imageName stringByAppendingString:@"-Portrait"];
-                    break;
-            }
-        }
-    }
-
-    return imageName;
-}
-
-- (void) onAppDidFinishLaunching:(NSNotification *)notification {
-        [self makeSecure];
-}
-
-- (void) makeSecure {
+- (void)createSecureLayer {
+    // generate a layer with massive text input field
+    // when field.secureTextEntry is YES, screenshots of the input gets blacked out, so entire app gets blacked out
     UIWindow *window = [[[[UIApplication sharedApplication] delegate] window] rootViewController].view.window;
 
     UITextField *field = [[UITextField alloc] init];
@@ -185,7 +70,7 @@ static UIImageView *imageView;
     UIImageView *image = [[UIImageView alloc] initWithImage:[UIImage imageNamed:@"whiteImage"]];
     image.frame = CGRectMake(0, 0, [UIScreen mainScreen].bounds.size.width, [UIScreen mainScreen].bounds.size.height);
 
-    field.secureTextEntry = YES;
+    field.secureTextEntry = NO;
 
     [window addSubview:field];
     [view addSubview:image];
@@ -195,6 +80,36 @@ static UIImageView *imageView;
 
     field.leftView = view;
     field.leftViewMode = UITextFieldViewModeAlways;
+
+    secureField = field;
+}
+
+- (void) onAppDidFinishLaunching:(NSNotification *)notification {
+    [self createSecureLayer];
+}
+
+- (void)enable:(CDVInvokedUrlCommand*)command {
+    // NSLog(@"PrivacyScreenPlugin enabled");
+    enabled = true;
+
+    if (secureField != NULL) {
+        secureField.secureTextEntry = YES;
+    }
+
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus: CDVCommandStatus_OK messageAsString: @"PrivacyScreenPlugin enabled"];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
+}
+
+- (void)disable:(CDVInvokedUrlCommand*)command {
+    // NSLog(@"PrivacyScreenPlugin disabled");
+    enabled = false;
+
+    if (secureField != NULL) {
+        secureField.secureTextEntry = NO;
+    }
+
+    CDVPluginResult* result = [CDVPluginResult resultWithStatus: CDVCommandStatus_OK messageAsString: @"PrivacyScreenPlugin disabled"];
+    [self.commandDelegate sendPluginResult:result callbackId:command.callbackId];
 }
 
 @end

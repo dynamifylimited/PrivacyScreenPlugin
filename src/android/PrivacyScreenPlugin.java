@@ -16,11 +16,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import org.json.JSONArray;
-import org.json.JSONException;
 import org.json.JSONObject;
-
-import android.content.Context;
-import android.os.Bundle;
 
 /**
  * This class sets the FLAG_SECURE flag on the window to make the app
@@ -31,7 +27,42 @@ public class PrivacyScreenPlugin extends CordovaPlugin {
     @Override
     public void initialize(CordovaInterface cordova, CordovaWebView webView) {
         super.initialize(cordova, webView);
-        Activity activity = this.cordova.getActivity();
-        activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+        // Activity activity = this.cordova.getActivity();
+        // activity.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SECURE);
+    }
+
+    @Override
+    public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
+        if (action.equals("disable")) {
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        // Allow screenshots by removing the FLAG_SECURE
+                        this.cordova.getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        callbackContext.success("Success");
+                    } catch (Exception e) {
+                        callbackContext.error(e.toString());
+                    }
+                }
+            });
+
+            return true;
+        } else if (action.equals("enable")) {
+            this.cordova.getActivity().runOnUiThread(new Runnable() {
+                public void run() {
+                    try {
+                        // Block screenshots by adding the FLAG_SECURE
+                        this.cordova.getActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        callbackContext.success("Success");
+                    } catch (Exception e) {
+                        callbackContext.error(e.toString());
+                    }
+                }
+            });
+            return true;
+        } else {
+            return false;
+        }
+
     }
 }

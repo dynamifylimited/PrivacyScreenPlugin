@@ -20,4 +20,7 @@ typedef struct {
 
 @interface PrivacyScreenPlugin : CDVPlugin
 
+- (void)enable:(CDVInvokedUrlCommand*)command;
+- (void)disable:(CDVInvokedUrlCommand*)command;
+
 @end
