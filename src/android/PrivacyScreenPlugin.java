@@ -16,7 +16,7 @@ import android.view.Window;
 import android.view.WindowManager;
 
 import org.json.JSONArray;
-import org.json.JSONObject;
+import org.json.JSONException;
 
 /**
  * This class sets the FLAG_SECURE flag on the window to make the app
@@ -33,12 +33,13 @@ public class PrivacyScreenPlugin extends CordovaPlugin {
 
     @Override
     public boolean execute(String action, JSONArray args, final CallbackContext callbackContext) throws JSONException {
+        CordovaInterface cordova = this.cordova;
         if (action.equals("disable")) {
-            this.cordova.getActivity().runOnUiThread(new Runnable() {
+            cordova.getActivity().runOnUiThread(new Runnable() {
                 public void run() {
                     try {
                         // Allow screenshots by removing the FLAG_SECURE
-                        this.cordova.getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        cordova.getActivity().getWindow().clearFlags(WindowManager.LayoutParams.FLAG_SECURE);
                         callbackContext.success("Success");
                     } catch (Exception e) {
                         callbackContext.error(e.toString());
@@ -48,11 +49,14 @@ public class PrivacyScreenPlugin extends CordovaPlugin {
 
             return true;
         } else if (action.equals("enable")) {
-            this.cordova.getActivity().runOnUiThread(new Runnable() {
+            cordova.getActivity().runOnUiThread(new Runnable() {
                 public void run() {
                     try {
                         // Block screenshots by adding the FLAG_SECURE
-                        this.cordova.getActivity().getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE);
+                        cordova.getActivity().getWindow().setFlags(
+                                WindowManager.LayoutParams.FLAG_SECURE,
+                                WindowManager.LayoutParams.FLAG_SECURE
+                        );
                         callbackContext.success("Success");
                     } catch (Exception e) {
                         callbackContext.error(e.toString());
